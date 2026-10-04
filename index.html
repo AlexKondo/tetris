@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#a9c9e0" />
+<title>Tetris Super Tower</title>
+<link rel="icon" href="data:,">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #a9c9e0; touch-action: none; overscroll-behavior: none; }
+  #app { position: fixed; inset: 0; }
+  #app canvas { display: block; width: 100%; height: 100%; }
+  #fps { position: fixed; top: 6px; left: 6px; padding: 2px 6px; font: 12px/1.4 monospace; color: #fff; background: rgba(0,0,0,.55); border-radius: 4px; z-index: 10; pointer-events: none; }
+  :root { --ivory: #f6f1e4; --gold: #e8b93c; --gold-d: #a67c12; --red: #c8211b; --ink: #3a2a00; }
+  #ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; font-family: "Trebuchet MS", system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
+  #hud { position: absolute; top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); display: flex; gap: 6px; align-items: stretch; justify-content: center; }
+  .card { flex: 0 1 auto; min-width: 0; background: linear-gradient(var(--ivory), #e9e0c8); border: 2px solid var(--gold); border-radius: 12px; box-shadow: 0 2px 8px rgba(10,50,90,.35); padding: 4px 8px; min-width: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ink); }
+  .card.main { min-width: 64px; }
+  .btns { flex: 0 0 auto; }
+  #hud { flex-wrap: nowrap; gap: 6px; }
+  @media (max-width: 400px) {
+    #hud { gap: 4px; left: max(6px, env(safe-area-inset-left)); right: max(6px, env(safe-area-inset-right)); }
+    .card { padding: 3px 5px; border-radius: 10px; }
+    .card.main { min-width: 0; }
+    .card b { font-size: 18px; }
+    .card span { letter-spacing: .04em; }
+    .card.next canvas { width: 44px; height: 44px; }
+    #btn-pause, #btn-mute { width: 34px; }
+  }
+  .card b { font-size: 20px; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--red); }
+  .card span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-d); font-weight: 700; }
+  .card.next { padding: 2px 4px; }
+  .card.next canvas { width: 56px; height: 56px; }
+  .btns { display: flex; flex-direction: column; gap: 4px; }
+  .btns button { flex: 1; }
+  #btn-mute { display: flex; align-items: center; justify-content: center; }
+  #btn-mute.muted { color: #8a8f99; background: #e4e1d6; }
+  .card small { font-size: 11px; font-weight: 700; color: var(--ink); opacity: .75; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+  #o-best { font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+  #o-best.newbest { color: #ffe08a; font-size: 16px; text-shadow: 0 0 12px rgba(255,200,60,.9); }
+  @media (min-aspect-ratio: 1/1) { #hud { justify-content: flex-start; } }
+  #viewctl { position: absolute; right: max(6px, env(safe-area-inset-right)); top: 100px; display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none; padding: 5px 4px 6px; border-radius: 14px; background: rgba(12,50,86,.38); }
+  #viewctl .vlabel { font: 800 10px/1 "Trebuchet MS", system-ui, sans-serif; letter-spacing: .14em; color: var(--ivory); text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+  #viewctl .vread { font: 800 11px/1 "Trebuchet MS", system-ui, sans-serif; color: var(--ivory); text-shadow: 0 1px 2px rgba(0,0,0,.6); font-variant-numeric: tabular-nums; }
+  #viewctl button { pointer-events: auto; width: 40px; height: 36px; padding: 0; border: 2px solid var(--gold); border-radius: 12px; background: linear-gradient(var(--ivory), #e9e0c8); color: var(--red); font: 800 18px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 2px 6px rgba(10,50,90,.4); touch-action: manipulation; }
+  #viewctl button.small { font-size: 17px; }
+  #viewctl button.pan { height: 30px; }
+  #viewctl button:hover { border-color: #fff; }
+  #viewctl button:active { background: var(--gold); }
+  @media (min-aspect-ratio: 1/1) { #viewctl { top: 10px; } }
+  /* desktop (mouse + wide window): lots of free space at the sides -> bigger controls */
+  @media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+    #hud { zoom: 1.5; }
+    #viewctl { zoom: 2; }
+  }
+  @media (max-width: 360px) {
+    #viewctl { padding: 3px 2px 4px; gap: 3px; border-radius: 12px; }
+    #viewctl .vlabel, #viewctl .vread { display: none; }
+    #viewctl button { width: 30px; height: 30px; border-radius: 10px; font-size: 15px; }
+  }
+  #popups { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .popup { position: absolute; left: 50%; top: 42%; transform: translate(-50%, 0); font: 900 38px/1 "Trebuchet MS", system-ui, sans-serif; color: var(--ivory); text-shadow: 0 3px 0 var(--red), 0 0 14px rgba(255,200,60,.9); animation: rise 1.2s ease-out forwards; white-space: nowrap; }
+  .popup.big { font-size: 56px; color: #ffe08a; }
+  @keyframes rise { 0% { opacity: 0; transform: translate(-50%, 20px) scale(.6); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -90px) scale(1); } }
+  #levelflash { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font: 900 44px/1 "Trebuchet MS", system-ui, sans-serif; letter-spacing: .1em; color: #fff; text-shadow: 0 3px 0 var(--gold-d), 0 0 22px rgba(255,220,100,1); opacity: 0; pointer-events: none; }
+  #levelflash.go { animation: lvl 1.4s ease-out; }
+  @keyframes lvl { 0% { opacity: 0; transform: scale(.7); } 20% { opacity: 1; transform: scale(1.1); } 70% { opacity: 1; } 100% { opacity: 0; transform: scale(1.2); } }
+  @media (prefers-reduced-motion: reduce) { .popup, #levelflash.go { animation-duration: .01s; } }
+  #btn-pause, #btn-mute { pointer-events: auto; border: 2px solid var(--gold); background: var(--ivory); color: var(--red); border-radius: 12px; width: 40px; font: 800 14px/1 system-ui; padding: 0; cursor: pointer; box-shadow: 0 2px 8px rgba(10,50,90,.35); }
+  .overlay { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: rgba(12,50,86,.55); backdrop-filter: blur(3px); color: #fff; text-align: center; pointer-events: auto; padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom); }
+  .overlay .byline { margin: -4px 0 6px; font: 700 14px/1 "Trebuchet MS", system-ui, sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); text-shadow: 0 2px 6px rgba(0,0,0,.4); }
+  .overlay h1 { margin: 0; font: 900 44px/1.05 "Trebuchet MS", system-ui, sans-serif; letter-spacing: .06em; color: var(--ivory); text-shadow: 0 3px 0 var(--gold-d), 0 6px 14px rgba(0,0,0,.35); }
+  .overlay h2 { margin: 0; font: 900 36px/1 "Trebuchet MS", system-ui, sans-serif; letter-spacing: .08em; color: var(--ivory); text-shadow: 0 3px 0 var(--gold-d); }
+  .overlay p { margin: 0; font-size: 13px; opacity: .92; max-width: 260px; }
+  .overlay button { pointer-events: auto; cursor: pointer; min-width: 190px; padding: 12px 22px; font: 800 16px/1 "Trebuchet MS", system-ui, sans-serif; letter-spacing: .1em; color: var(--ink); background: var(--ivory); border: 3px solid var(--gold); border-radius: 14px; box-shadow: 0 4px 0 var(--gold-d); }
+  .overlay button.primary { background: var(--red); color: var(--ivory); border-color: var(--gold); }
+  .overlay button:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--gold-d); }
+  .modes { display: flex; gap: 8px; }
+  .modes button { min-width: 0 !important; padding: 9px 14px !important; font-size: 14px !important; }
+  .modes button.on { background: var(--red); color: var(--ivory); }
+  .final { display: flex; flex-direction: column; align-items: center; }
+  .final b { font-size: 54px; line-height: 1; color: var(--ivory); text-shadow: 0 3px 0 var(--gold-d); font-variant-numeric: tabular-nums; }
+  .final span { font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

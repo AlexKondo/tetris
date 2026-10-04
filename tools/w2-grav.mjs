@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const p = await b.newPage({ viewport: { width: 430, height: 900 } });
+const logs = []; p.on('console', m => m.type()!=='debug' && logs.push(m.type()+': '+m.text())); p.on('pageerror', e => logs.push('PAGEERROR '+e.message));
+await p.goto('http://localhost:5173/?seed=123');
+await p.waitForTimeout(1500);
+const r0 = await p.evaluate(() => window.__game.logic.piece.row);
+await p.waitForTimeout(6000);
+const r1 = await p.evaluate(() => ({ row: window.__game.logic.piece.row, same: window.__game.logic.piece.name }));
+console.log('gravity fall', r0, '->', r1.row, logs.join('|') || 'no errors');
+await b.close();

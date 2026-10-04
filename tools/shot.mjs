@@ -1,0 +1,13 @@
+import { chromium } from 'playwright';
+const [,, out = 'screenshots/w1-mobile.png', w = '430', h = '900', q = '?debug'] = process.argv;
+const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const p = await b.newPage({ viewport: { width: +w, height: +h }, deviceScaleFactor: 1 });
+const logs = [];
+p.on('console', m => logs.push(m.type() + ': ' + m.text()));
+p.on('pageerror', e => logs.push('PAGEERROR: ' + e.message));
+await p.goto('http://localhost:5173/' + q);
+await p.waitForTimeout(3500);
+await p.screenshot({ path: out, timeout: 120000 });
+console.log('fps', await p.evaluate(() => window.__game && window.__game.fps));
+console.log(logs.join('\n') || 'no console output');
+await b.close();

@@ -1,0 +1,23 @@
+{
+  "name": "mahjong-tower",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host --port 5173 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --port 5173",
+    "test": "node --test test/*.test.js",
+    "server": "node server/index.js",
+    "dev:all": "node scripts/dev-all.mjs",
+    "test:api": "node tools/api-test.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.23.1",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0",
+    "vite": "^6.0.0"
+  }
+}
